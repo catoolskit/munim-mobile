@@ -16,10 +16,12 @@ class InvoiceListScreen extends StatefulWidget {
   });
 
   @override
-  State<InvoiceListScreen> createState() => _InvoiceListScreenState();
+  State<InvoiceListScreen> createState() =>
+      _InvoiceListScreenState();
 }
 
-class _InvoiceListScreenState extends State<InvoiceListScreen> {
+class _InvoiceListScreenState
+    extends State<InvoiceListScreen> {
   late List<Invoice> _invoices;
 
   @override
@@ -34,8 +36,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
       builder: (_) => AlertDialog(
         title: const Text('Delete Invoice'),
         content: Text(
-            'Delete invoice ${inv.invNo} for ${inv.party}?\n\n'
-            'This cannot be undone.'),
+          'Delete invoice ${inv.invNo} for ${inv.party}?\n\n'
+          'This cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -43,19 +45,33 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Delete',
-              style: TextStyle(color: MunimTheme.danger))),
+              style: TextStyle(
+                color: MunimTheme.danger))),
         ],
       ),
     );
     if (ok != true) return;
-    final updated = await StorageService.deleteInvoice(inv.mobileId);
+    final updated =
+        await StorageService.deleteInvoice(inv.mobileId);
     setState(() => _invoices = updated);
+  }
+
+  Future<void> _sharePdf(Invoice inv) async {
+    try {
+      await ExportService.shareInvoicePdf(
+          inv, widget.config.company);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')));
+    }
   }
 
   Future<void> _shareAll() async {
     if (_invoices.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No invoices to share.')));
+        const SnackBar(
+          content: Text('No invoices to share.')));
       return;
     }
     try {
@@ -75,7 +91,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
         title: const Text('Clear All Invoices'),
         content: const Text(
           'Remove all invoices from this device?\n\n'
-          'Make sure you have already imported them into MUNIM on your PC.'),
+          'Make sure you have already imported them '
+          'into MUNIM on your PC.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -83,7 +100,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Clear all',
-              style: TextStyle(color: MunimTheme.danger))),
+              style: TextStyle(
+                color: MunimTheme.danger))),
         ],
       ),
     );
@@ -92,7 +110,8 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
     setState(() => _invoices = []);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('All invoices cleared.')));
+      const SnackBar(
+        content: Text('All invoices cleared.')));
   }
 
   @override
@@ -107,31 +126,30 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
           IconButton(
             icon: const Icon(Icons.share),
             tooltip: 'Share JSON',
-            onPressed: _shareAll,
-          ),
+            onPressed: _shareAll),
           IconButton(
             icon: const Icon(Icons.delete_sweep_outlined),
             tooltip: 'Clear all',
-            onPressed: _clearAll,
-          ),
+            onPressed: _clearAll),
         ],
       ),
       body: Column(
         children: [
-          // Summary bar
           Container(
             color: MunimTheme.navy,
             padding: const EdgeInsets.symmetric(
                 horizontal: 20, vertical: 12),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment:
+                  MainAxisAlignment.spaceBetween,
               children: [
                 Text('${_invoices.length} invoices',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 13,
                     fontWeight: FontWeight.w600)),
-                Text('Total: Rs ${ExportService.inr(total)}',
+                Text(
+                  'Total: Rs ${ExportService.inr(total)}',
                   style: const TextStyle(
                     color: MunimTheme.gold,
                     fontSize: 14,
@@ -139,17 +157,18 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
               ],
             ),
           ),
-
-          // List
           Expanded(
             child: _invoices.isEmpty
                 ? Center(
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisAlignment:
+                          MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.receipt_long_outlined,
+                        Icon(
+                          Icons.receipt_long_outlined,
                           size: 56,
-                          color: MunimTheme.muted.withOpacity(0.3)),
+                          color: MunimTheme.muted
+                              .withOpacity(0.3)),
                         const SizedBox(height: 14),
                         const Text('No invoices',
                           style: TextStyle(
@@ -166,6 +185,7 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                       return _InvoiceCard(
                         invoice: inv,
                         onDelete: () => _delete(inv),
+                        onSharePdf: () => _sharePdf(inv),
                       );
                     },
                   ),
@@ -179,9 +199,11 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
                 child: ElevatedButton.icon(
                   onPressed: _shareAll,
                   icon: const Icon(Icons.share),
-                  label: const Text('Share JSON to import in MUNIM'),
+                  label: const Text(
+                    'Share JSON to import in MUNIM'),
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14)),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 14)),
                 ),
               ),
             )
@@ -193,10 +215,12 @@ class _InvoiceListScreenState extends State<InvoiceListScreen> {
 class _InvoiceCard extends StatelessWidget {
   final Invoice invoice;
   final VoidCallback onDelete;
+  final VoidCallback onSharePdf;
 
   const _InvoiceCard({
     required this.invoice,
     required this.onDelete,
+    required this.onSharePdf,
   });
 
   @override
@@ -212,14 +236,16 @@ class _InvoiceCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(
                 horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: MunimTheme.accent.withOpacity(0.06),
+              color:
+                  MunimTheme.accent.withOpacity(0.06),
               borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(12)),
+                top: Radius.circular(12)),
             ),
             child: Row(children: [
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
                   children: [
                     Text(inv.invNo,
                       style: const TextStyle(
@@ -234,9 +260,11 @@ class _InvoiceCard extends StatelessWidget {
                 ),
               ),
               Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment:
+                    CrossAxisAlignment.end,
                 children: [
-                  Text('Rs ${ExportService.inr(inv.grandTotal)}',
+                  Text(
+                    'Rs ${ExportService.inr(inv.grandTotal)}',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
@@ -256,16 +284,18 @@ class _InvoiceCard extends StatelessWidget {
                 horizontal: 16, vertical: 8),
             child: Column(
               children: inv.items.map((it) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
+                padding: const EdgeInsets.symmetric(
+                    vertical: 3),
                 child: Row(children: [
                   Expanded(
                     child: Text(
-                      '${it.name}  ×  ${it.qty} ${it.qty == it.qty.roundToDouble() ? it.qty.toInt() : it.qty}',
+                      '${it.name}  ×  '
+                      '${it.qty % 1 == 0 ? it.qty.toInt() : it.qty}',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: MunimTheme.muted)),
-                  ),
-                  Text('Rs ${ExportService.inr(it.total)}',
+                        color: MunimTheme.muted))),
+                  Text(
+                    'Rs ${ExportService.inr(it.total)}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: MunimTheme.text,
@@ -275,33 +305,51 @@ class _InvoiceCard extends StatelessWidget {
             ),
           ),
 
-          // GST summary
+          // GST + actions
           Container(
             padding: const EdgeInsets.symmetric(
                 horizontal: 16, vertical: 8),
             decoration: const BoxDecoration(
               border: Border(
-                top: BorderSide(color: MunimTheme.border))),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(inv.interstate
+                top: BorderSide(
+                  color: MunimTheme.border))),
+            child: Row(children: [
+              Expanded(
+                child: Text(
+                  inv.interstate
                     ? 'IGST: Rs ${ExportService.inr(inv.igst)}'
-                    : 'CGST: Rs ${ExportService.inr(inv.cgst)}  '
-                      'SGST: Rs ${ExportService.inr(inv.sgst)}',
+                    : 'CGST: ${ExportService.inr(inv.cgst)}'
+                      '  SGST: ${ExportService.inr(inv.sgst)}',
                   style: const TextStyle(
-                    fontSize: 11, color: MunimTheme.muted)),
-                TextButton(
-                  onPressed: onDelete,
-                  style: TextButton.styleFrom(
-                    foregroundColor: MunimTheme.danger,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8)),
-                  child: const Text('Delete',
-                    style: TextStyle(fontSize: 12)),
-                ),
-              ],
-            ),
+                    fontSize: 10,
+                    color: MunimTheme.muted)),
+              ),
+              // PDF button
+              TextButton.icon(
+                onPressed: onSharePdf,
+                icon: const Icon(
+                  Icons.picture_as_pdf,
+                  size: 15,
+                  color: MunimTheme.accent),
+                label: const Text('PDF',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: MunimTheme.accent)),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 6)),
+              ),
+              // Delete button
+              TextButton(
+                onPressed: onDelete,
+                style: TextButton.styleFrom(
+                  foregroundColor: MunimTheme.danger,
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 6)),
+                child: const Text('Delete',
+                  style: TextStyle(fontSize: 12)),
+              ),
+            ]),
           ),
         ],
       ),
