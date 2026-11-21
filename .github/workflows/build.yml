@@ -30,11 +30,10 @@ jobs:
           flutter create --org com.catoolskit --project-name munim_mobile /tmp/scaffold
           cp -r /tmp/scaffold/android ./android
 
-      - name: Fix Kotlin version in android/build.gradle
+      - name: Fix Kotlin version
         run: |
-          cat android/build.gradle
-          sed -i "s/ext.kotlin_version = '[^']*'/ext.kotlin_version = '1.9.22'/" android/build.gradle
-          cat android/build.gradle
+          sed -i "s/id \"org.jetbrains.kotlin.android\" version \"[^\"]*\"/id \"org.jetbrains.kotlin.android\" version \"1.9.22\"/" android/settings.gradle
+          cat android/settings.gradle
 
       - name: Install dependencies
         run: flutter pub get
