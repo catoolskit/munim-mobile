@@ -108,3 +108,235 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: _reset,
           ),
         ],
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Company card
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [MunimTheme.navy, Color(0xFF1B3156)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(company.name,
+                            style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold,
+                              color: Colors.white)),
+                          const SizedBox(height: 4),
+                          Text(company.gstin.isEmpty
+                              ? 'No GSTIN'
+                              : company.gstin,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.white.withOpacity(0.6))),
+                          const SizedBox(height: 4),
+                          Text('FY ${company.fy}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.white.withOpacity(0.5))),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Stats row
+                    Row(children: [
+                      _statCard('Invoices', '${_invoices.length}',
+                          Icons.receipt_outlined, MunimTheme.accent),
+                      const SizedBox(width: 12),
+                      _statCard(
+                        'Total Sales',
+                        'Rs ${ExportService.inr(_invoices.fold(0.0, (s, i) => s + i.grandTotal))}',
+                        Icons.trending_up,
+                        MunimTheme.ok,
+                      ),
+                    ]),
+                    const SizedBox(height: 20),
+
+                    // Action buttons
+                    Row(children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _newInvoice,
+                          icon: const Icon(Icons.add),
+                          label: const Text('New Invoice'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14)),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _share,
+                          icon: const Icon(Icons.share),
+                          label: const Text('Share JSON'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            foregroundColor: MunimTheme.accent,
+                            side: const BorderSide(color: MunimTheme.accent),
+                          ),
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 20),
+
+                    // Recent invoices
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Recent Invoices',
+                          style: MunimTheme.headingStyle),
+                        if (_invoices.isNotEmpty)
+                          TextButton(
+                            onPressed: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => InvoiceListScreen(
+                                    config: _config,
+                                    invoices: _invoices,
+                                  ),
+                                ),
+                              );
+                              _load();
+                            },
+                            child: const Text('View all'),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    if (_invoices.isEmpty)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(32),
+                        decoration: MunimTheme.cardBox(),
+                        child: Column(children: [
+                          Icon(Icons.receipt_long_outlined,
+                            size: 48,
+                            color: MunimTheme.muted.withOpacity(0.4)),
+                          const SizedBox(height: 12),
+                          const Text('No invoices yet',
+                            style: TextStyle(
+                              color: MunimTheme.muted, fontSize: 14)),
+                          const SizedBox(height: 4),
+                          const Text('Tap New Invoice to create one',
+                            style: TextStyle(
+                              color: MunimTheme.muted, fontSize: 12)),
+                        ]),
+                      )
+                    else
+                      ..._invoices.take(5).map((inv) => _invoiceTile(inv)),
+                  ],
+                ),
+              ),
+            ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _newInvoice,
+        backgroundColor: MunimTheme.accent,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('New Invoice',
+          style: TextStyle(fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
+  Widget _statCard(String label, String value,
+      IconData icon, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: MunimTheme.cardBox(),
+        child: Row(children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                  style: const TextStyle(
+                    fontSize: 11, color: MunimTheme.muted)),
+                Text(value,
+                  style: const TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.bold,
+                    color: MunimTheme.text),
+                  overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _invoiceTile(Invoice inv) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: MunimTheme.cardBox(),
+      child: Row(children: [
+        Container(
+          width: 40, height: 40,
+          decoration: BoxDecoration(
+            color: MunimTheme.accent.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(Icons.receipt_outlined,
+            color: MunimTheme.accent, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(inv.invNo,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14, color: MunimTheme.text)),
+              Text(inv.party,
+                style: const TextStyle(
+                  fontSize: 12, color: MunimTheme.muted)),
+            ],
+          ),
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text('Rs ${ExportService.inr(inv.grandTotal)}',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14, color: MunimTheme.accent)),
+            Text(ExportService.fmtDate(inv.date),
+              style: const TextStyle(
+                fontSize: 11, color: MunimTheme.muted)),
+          ],
+        ),
+      ]),
+    );
+  }
+}
