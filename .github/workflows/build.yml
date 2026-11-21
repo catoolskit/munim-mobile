@@ -29,14 +29,17 @@ jobs:
         run: |
           flutter create --org com.catoolskit --project-name munim_mobile /tmp/scaffold
           cp -r /tmp/scaffold/android ./android
-          cp -r /tmp/scaffold/ios ./ios
-          cp /tmp/scaffold/.gitignore ./.gitignore || true
+          cp /tmp/scaffold/pubspec.yaml /tmp/pubspec_scaffold.yaml || true
 
       - name: Install dependencies
         run: flutter pub get
 
       - name: Build APK
-        run: flutter build apk --release --no-tree-shake-icons
+        run: |
+          cd android
+          sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.0"/' build.gradle
+          cd ..
+          flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
