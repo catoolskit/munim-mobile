@@ -22,24 +22,25 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0'
+          flutter-version: '3.24.0'
           channel: 'stable'
 
       - name: Create Flutter project scaffold
         run: |
           flutter create --org com.catoolskit --project-name munim_mobile /tmp/scaffold
           cp -r /tmp/scaffold/android ./android
-          cp /tmp/scaffold/pubspec.yaml /tmp/pubspec_scaffold.yaml || true
+
+      - name: Fix Kotlin version in android/build.gradle
+        run: |
+          cat android/build.gradle
+          sed -i "s/ext.kotlin_version = '[^']*'/ext.kotlin_version = '1.9.22'/" android/build.gradle
+          cat android/build.gradle
 
       - name: Install dependencies
         run: flutter pub get
 
       - name: Build APK
-        run: |
-          cd android
-          sed -i 's/ext.kotlin_version = .*/ext.kotlin_version = "1.9.0"/' build.gradle
-          cd ..
-          flutter build apk --release --no-tree-shake-icons
+        run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
