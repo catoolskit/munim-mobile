@@ -81,8 +81,9 @@ class ExportService {
                 padding: const pw.EdgeInsets.symmetric(
                     vertical: 6),
                 decoration: const pw.BoxDecoration(
-                  border: pw.Border(
-                    bottom: pw.BorderSide(width: 1.5))),
+                    border: pw.Border(
+                        bottom:
+                            pw.BorderSide(width: 1.5))),
                 child: pw.Center(
                   child: pw.Text('TAX INVOICE',
                     style: pw.TextStyle(
@@ -98,7 +99,6 @@ class ExportService {
                 crossAxisAlignment:
                     pw.CrossAxisAlignment.start,
                 children: [
-                  // Seller
                   pw.Expanded(
                     child: pw.Column(
                       crossAxisAlignment:
@@ -134,7 +134,6 @@ class ExportService {
                     ),
                   ),
                   pw.SizedBox(width: 20),
-                  // Invoice details
                   pw.Column(
                     crossAxisAlignment:
                         pw.CrossAxisAlignment.end,
@@ -165,43 +164,50 @@ class ExportService {
               pw.SizedBox(height: 6),
 
               // ── Buyer ─────────────────────────────────
-              pw.Row(
-                crossAxisAlignment:
-                    pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Expanded(
-                    child: pw.Column(
-                      crossAxisAlignment:
-                          pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text('BUYER',
-                          style: pw.TextStyle(
-                            fontSize: 8,
-                            color: PdfColors.grey600,
-                            fontWeight:
-                                pw.FontWeight.bold)),
-                        pw.SizedBox(height: 3),
-                        pw.Text(inv.party,
-                          style: pw.TextStyle(
-                            fontSize: 12,
-                            fontWeight:
-                                pw.FontWeight.bold)),
-                        if (inv.partyGstin.isNotEmpty)
-                          pw.Text(
-                            'GSTIN: ${inv.partyGstin}',
-                            style: const pw.TextStyle(
-                                fontSize: 9)),
-                        if (inv.partyPhone.isNotEmpty)
-                          pw.Text(
-                            'Ph: ${inv.partyPhone}',
-                            style: const pw.TextStyle(
-                                fontSize: 9)),
-                      ],
-                    ),
-                  ),
-                ],
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.all(10),
+                decoration: pw.BoxDecoration(
+                    border: pw.Border.all(
+                        color: PdfColors.grey400,
+                        width: 0.5)),
+                child: pw.Column(
+                  crossAxisAlignment:
+                      pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('BILL TO',
+                      style: pw.TextStyle(
+                        fontSize: 8,
+                        color: PdfColors.grey600,
+                        fontWeight:
+                            pw.FontWeight.bold)),
+                    pw.SizedBox(height: 4),
+                    pw.Text(inv.party,
+                      style: pw.TextStyle(
+                        fontSize: 14,
+                        fontWeight:
+                            pw.FontWeight.bold)),
+                    if (inv.partyGstin.isNotEmpty)
+                      pw.Text(
+                        'GSTIN: ${inv.partyGstin}',
+                        style: const pw.TextStyle(
+                            fontSize: 10)),
+                    if (inv.partyPhone.isNotEmpty)
+                      pw.Text(
+                        'Ph: ${inv.partyPhone}',
+                        style: const pw.TextStyle(
+                            fontSize: 10)),
+                    if (inv.partyAddress.isNotEmpty)
+                      pw.Text(
+                        inv.partyAddress,
+                        style: const pw.TextStyle(
+                            fontSize: 10)),
+                  ],
+                ),
               ),
-              pw.SizedBox(height: 10),
+              pw.SizedBox(height: 6),
+              pw.Divider(thickness: 0.5),
+              pw.SizedBox(height: 6),
 
               // ── Items table ───────────────────────────
               pw.Table(
@@ -218,11 +224,9 @@ class ExportService {
                   6: const pw.FixedColumnWidth(72),
                 },
                 children: [
-                  // Header
                   pw.TableRow(
-                    decoration:
-                        const pw.BoxDecoration(
-                            color: PdfColors.grey200),
+                    decoration: const pw.BoxDecoration(
+                        color: PdfColors.grey200),
                     children: [
                       _th('#'),
                       _th('HSN'),
@@ -233,43 +237,36 @@ class ExportService {
                       _th('Amount', right: true),
                     ],
                   ),
-                  // Items
                   ...inv.items.asMap().entries.map(
                     (e) => pw.TableRow(children: [
-                      _td('${e.key + 1}',
-                          center: true),
+                      _td('${e.key + 1}', center: true),
                       _td(e.value.hsn),
                       _td(e.value.name),
                       _td(
                         e.value.qty % 1 == 0
-                          ? e.value.qty
-                              .toInt()
-                              .toString()
+                          ? e.value.qty.toInt().toString()
                           : e.value.qty.toString(),
                         center: true),
-                      _td(inr(e.value.rate),
-                          right: true),
+                      _td(inr(e.value.rate), right: true),
                       _td('${e.value.gstRate}%',
                           center: true),
                       _td(inr(e.value.amount),
                           right: true),
                     ]),
                   ),
-                  // Total row
                   pw.TableRow(
-                    decoration:
-                        const pw.BoxDecoration(
-                            color: PdfColors.grey100),
+                    decoration: const pw.BoxDecoration(
+                        color: PdfColors.grey100),
                     children: [
                       _td('', span: true),
                       _td('', span: true),
                       _td('Total',
-                        bold: true, span: true),
+                          bold: true, span: true),
                       _td('', span: true),
                       _td('', span: true),
                       _td('', span: true),
                       _td(inr(inv.taxable),
-                        right: true, bold: true),
+                          right: true, bold: true),
                     ],
                   ),
                 ],
@@ -298,9 +295,8 @@ class ExportService {
                 },
                 children: [
                   pw.TableRow(
-                    decoration:
-                        const pw.BoxDecoration(
-                            color: PdfColors.grey200),
+                    decoration: const pw.BoxDecoration(
+                        color: PdfColors.grey200),
                     children: [
                       _th('HSN/SAC'),
                       _th('Taxable Amt', right: true),
@@ -323,9 +319,8 @@ class ExportService {
                     final igst = inv.interstate
                         ? h.taxable * h.gstRate / 100
                         : 0.0;
-                    final totalTax = inv.interstate
-                        ? igst
-                        : cgst + sgst;
+                    final totalTax =
+                        inv.interstate ? igst : cgst + sgst;
                     return pw.TableRow(children: [
                       _td(h.hsn),
                       _td(inr(h.taxable), right: true),
@@ -351,8 +346,7 @@ class ExportService {
                         : inr(sgst),
                         right: true),
                       _td(inr(totalTax),
-                          right: true,
-                          bold: true),
+                          right: true, bold: true),
                     ]);
                   }),
                 ],
@@ -374,12 +368,12 @@ class ExportService {
                       children: [
                         if (!inv.interstate) ...[
                           _summaryRow(
-                            'CGST', inr(inv.cgst)),
+                              'CGST', inr(inv.cgst)),
                           _summaryRow(
-                            'SGST', inr(inv.sgst)),
+                              'SGST', inr(inv.sgst)),
                         ] else
                           _summaryRow(
-                            'IGST', inr(inv.igst)),
+                              'IGST', inr(inv.igst)),
                         _summaryRow('Taxable Amount',
                             inr(inv.taxable)),
                         pw.TableRow(
@@ -391,19 +385,19 @@ class ExportService {
                             pw.Padding(
                               padding:
                                 const pw.EdgeInsets
-                                  .all(5),
+                                    .all(5),
                               child: pw.Text(
                                 'GRAND TOTAL',
                                 style: pw.TextStyle(
                                   fontSize: 10,
                                   fontWeight:
                                     pw.FontWeight
-                                      .bold)),
+                                        .bold)),
                             ),
                             pw.Padding(
                               padding:
                                 const pw.EdgeInsets
-                                  .all(5),
+                                    .all(5),
                               child: pw.Text(
                                 inr(inv.grandTotal),
                                 textAlign:
@@ -412,7 +406,7 @@ class ExportService {
                                   fontSize: 10,
                                   fontWeight:
                                     pw.FontWeight
-                                      .bold)),
+                                        .bold)),
                             ),
                           ],
                         ),
@@ -434,8 +428,7 @@ class ExportService {
                     style: pw.TextStyle(
                       fontSize: 8,
                       color: PdfColors.grey600,
-                      fontStyle:
-                          pw.FontStyle.italic)),
+                      fontStyle: pw.FontStyle.italic)),
                   pw.Text(
                     'For ${company.name}',
                     style: const pw.TextStyle(
@@ -532,14 +525,12 @@ class ExportService {
       pw.Padding(
         padding: const pw.EdgeInsets.all(5),
         child: pw.Text(label,
-          style:
-            const pw.TextStyle(fontSize: 9))),
+          style: const pw.TextStyle(fontSize: 9))),
       pw.Padding(
         padding: const pw.EdgeInsets.all(5),
         child: pw.Text(value,
           textAlign: pw.TextAlign.right,
-          style:
-            const pw.TextStyle(fontSize: 9))),
+          style: const pw.TextStyle(fontSize: 9))),
     ]);
   }
 }
