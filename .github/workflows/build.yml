@@ -29,11 +29,27 @@ jobs:
         run: |
           flutter create --org com.catoolskit --project-name munim_mobile /tmp/scaffold
           cp -r /tmp/scaffold/android ./android
+          echo "=== settings.gradle ==="
+          cat android/settings.gradle
+          echo "=== build.gradle ==="
+          cat android/build.gradle
 
       - name: Fix Kotlin version
         run: |
-          sed -i "s/id \"org.jetbrains.kotlin.android\" version \"[^\"]*\"/id \"org.jetbrains.kotlin.android\" version \"1.9.22\"/" android/settings.gradle
-          cat android/settings.gradle
+          python3 -c "
+          import re
+          with open('android/settings.gradle', 'r') as f:
+              content = f.read()
+          print('BEFORE:', content)
+          content = re.sub(
+              r'id [\"\\']org\.jetbrains\.kotlin\.android[\"\\'] version [\"\\'][^\"\\']*[\"\\']',
+              'id \"org.jetbrains.kotlin.android\" version \"2.0.21\"',
+              content
+          )
+          print('AFTER:', content)
+          with open('android/settings.gradle', 'w') as f:
+              f.write(content)
+          "
 
       - name: Install dependencies
         run: flutter pub get
