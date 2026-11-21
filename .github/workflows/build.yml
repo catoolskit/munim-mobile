@@ -25,6 +25,13 @@ jobs:
           flutter-version: '3.19.0'
           channel: 'stable'
 
+      - name: Create Flutter project scaffold
+        run: |
+          flutter create --org com.catoolskit --project-name munim_mobile /tmp/scaffold
+          cp -r /tmp/scaffold/android ./android
+          cp -r /tmp/scaffold/ios ./ios
+          cp /tmp/scaffold/.gitignore ./.gitignore || true
+
       - name: Install dependencies
         run: flutter pub get
 
