@@ -30,6 +30,21 @@ jobs:
           flutter create --org com.catoolskit --project-name munim_mobile /tmp/scaffold
           cp -r /tmp/scaffold/android ./android
 
+      - name: Fix Kotlin duplicate class issue
+        run: |
+          echo "android.useAndroidX=true" >> android/gradle.properties
+          echo "android.enableJetifier=true" >> android/gradle.properties
+          cat >> android/app/build.gradle << 'EOF'
+
+          configurations.all {
+              resolutionStrategy {
+                  force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.10'
+                  force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.10'
+                  force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.10'
+              }
+          }
+          EOF
+
       - name: Install dependencies
         run: flutter pub get
 
