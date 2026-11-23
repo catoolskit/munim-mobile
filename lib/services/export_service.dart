@@ -513,7 +513,7 @@ class ExportService {
                   pw.Text(
                     gstRegistered
                         ? 'This is a computer generated invoice.'
-                        : 'Not registered under GST — tax not collected on this invoice.',
+                        : 'Not registered under GST - tax not collected on this invoice.',
                     style: pw.TextStyle(
                         fontSize: 8,
                         color: PdfColors.grey600,
