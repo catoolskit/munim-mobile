@@ -19,7 +19,7 @@ class ExportService {
     final fileName =
         'munim_invoices_${companySlug}_$dateStr.json';
     final payload = {
-      'munim_version': 'v0.17',
+      'munim_version': 'v0.18',
       'exported_at': now.toIso8601String(),
       'company_name': company.name,
       'invoice_count': invoices.length,
@@ -50,20 +50,27 @@ class ExportService {
       Invoice inv, Company company) async {
     final pdf = pw.Document();
 
-    // Build HSN summary
+    // ── v0.18: GST registered flag ────────────────────────
+    final bool gstRegistered = company.gstRegistered;
+    final String invoiceHeading =
+        gstRegistered ? 'TAX INVOICE' : 'RETAIL INVOICE';
+
+    // Build HSN summary (only needed for registered)
     final Map<String, _HsnRow> hsnMap = {};
-    for (final it in inv.items) {
-      final key = it.hsn.isNotEmpty ? it.hsn : 'NA';
-      if (!hsnMap.containsKey(key)) {
-        hsnMap[key] = _HsnRow(
-          hsn: key,
-          gstRate: it.gstRate,
-          taxable: 0,
-          qty: 0,
-        );
+    if (gstRegistered) {
+      for (final it in inv.items) {
+        final key = it.hsn.isNotEmpty ? it.hsn : 'NA';
+        if (!hsnMap.containsKey(key)) {
+          hsnMap[key] = _HsnRow(
+            hsn: key,
+            gstRate: it.gstRate,
+            taxable: 0,
+            qty: 0,
+          );
+        }
+        hsnMap[key]!.taxable += it.amount;
+        hsnMap[key]!.qty += it.qty;
       }
-      hsnMap[key]!.taxable += it.amount;
-      hsnMap[key]!.qty += it.qty;
     }
     final hsnRows = hsnMap.values.toList();
 
@@ -78,18 +85,18 @@ class ExportService {
               // ── Title bar ─────────────────────────────
               pw.Container(
                 width: double.infinity,
-                padding: const pw.EdgeInsets.symmetric(
-                    vertical: 6),
+                padding:
+                    const pw.EdgeInsets.symmetric(vertical: 6),
                 decoration: const pw.BoxDecoration(
                     border: pw.Border(
-                        bottom:
-                            pw.BorderSide(width: 1.5))),
+                        bottom: pw.BorderSide(width: 1.5))),
                 child: pw.Center(
-                  child: pw.Text('TAX INVOICE',
+                  child: pw.Text(
+                    invoiceHeading,
                     style: pw.TextStyle(
-                      fontSize: 14,
-                      fontWeight: pw.FontWeight.bold,
-                      letterSpacing: 2)),
+                        fontSize: 14,
+                        fontWeight: pw.FontWeight.bold,
+                        letterSpacing: 2)),
                 ),
               ),
               pw.SizedBox(height: 10),
@@ -105,31 +112,33 @@ class ExportService {
                           pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text('SELLER',
-                          style: pw.TextStyle(
-                            fontSize: 8,
-                            color: PdfColors.grey600,
-                            fontWeight:
-                                pw.FontWeight.bold)),
+                            style: pw.TextStyle(
+                                fontSize: 8,
+                                color: PdfColors.grey600,
+                                fontWeight:
+                                    pw.FontWeight.bold)),
                         pw.SizedBox(height: 3),
                         pw.Text(company.name,
-                          style: pw.TextStyle(
-                            fontSize: 13,
-                            fontWeight:
-                                pw.FontWeight.bold)),
+                            style: pw.TextStyle(
+                                fontSize: 13,
+                                fontWeight:
+                                    pw.FontWeight.bold)),
                         if (company.address.isNotEmpty)
                           pw.Text(company.address,
-                            style: const pw.TextStyle(
-                                fontSize: 9)),
-                        if (company.gstin.isNotEmpty)
+                              style: const pw.TextStyle(
+                                  fontSize: 9)),
+                        // Only show GSTIN if registered
+                        if (gstRegistered &&
+                            company.gstin.isNotEmpty)
                           pw.Text(
-                            'GSTIN: ${company.gstin}',
-                            style: const pw.TextStyle(
-                                fontSize: 9)),
+                              'GSTIN: ${company.gstin}',
+                              style: const pw.TextStyle(
+                                  fontSize: 9)),
                         if (company.phone.isNotEmpty)
                           pw.Text(
-                            'Ph: ${company.phone}',
-                            style: const pw.TextStyle(
-                                fontSize: 9)),
+                              'Ph: ${company.phone}',
+                              style: const pw.TextStyle(
+                                  fontSize: 9)),
                       ],
                     ),
                   ),
@@ -139,22 +148,22 @@ class ExportService {
                         pw.CrossAxisAlignment.end,
                     children: [
                       pw.Text('Invoice No.',
-                        style: pw.TextStyle(
-                          fontSize: 8,
-                          color: PdfColors.grey600)),
+                          style: pw.TextStyle(
+                              fontSize: 8,
+                              color: PdfColors.grey600)),
                       pw.Text(inv.invNo,
-                        style: pw.TextStyle(
-                          fontSize: 13,
-                          fontWeight:
-                              pw.FontWeight.bold)),
+                          style: pw.TextStyle(
+                              fontSize: 13,
+                              fontWeight:
+                                  pw.FontWeight.bold)),
                       pw.SizedBox(height: 4),
                       pw.Text('Date',
-                        style: pw.TextStyle(
-                          fontSize: 8,
-                          color: PdfColors.grey600)),
+                          style: pw.TextStyle(
+                              fontSize: 8,
+                              color: PdfColors.grey600)),
                       pw.Text(fmtDate(inv.date),
-                        style: const pw.TextStyle(
-                            fontSize: 10)),
+                          style: const pw.TextStyle(
+                              fontSize: 10)),
                     ],
                   ),
                 ],
@@ -176,32 +185,33 @@ class ExportService {
                       pw.CrossAxisAlignment.start,
                   children: [
                     pw.Text('BILL TO',
-                      style: pw.TextStyle(
-                        fontSize: 8,
-                        color: PdfColors.grey600,
-                        fontWeight:
-                            pw.FontWeight.bold)),
+                        style: pw.TextStyle(
+                            fontSize: 8,
+                            color: PdfColors.grey600,
+                            fontWeight:
+                                pw.FontWeight.bold)),
                     pw.SizedBox(height: 4),
                     pw.Text(inv.party,
-                      style: pw.TextStyle(
-                        fontSize: 14,
-                        fontWeight:
-                            pw.FontWeight.bold)),
-                    if (inv.partyGstin.isNotEmpty)
+                        style: pw.TextStyle(
+                            fontSize: 14,
+                            fontWeight:
+                                pw.FontWeight.bold)),
+                    // Only show buyer GSTIN if registered
+                    if (gstRegistered &&
+                        inv.partyGstin.isNotEmpty)
                       pw.Text(
-                        'GSTIN: ${inv.partyGstin}',
-                        style: const pw.TextStyle(
-                            fontSize: 10)),
+                          'GSTIN: ${inv.partyGstin}',
+                          style: const pw.TextStyle(
+                              fontSize: 10)),
                     if (inv.partyPhone.isNotEmpty)
                       pw.Text(
-                        'Ph: ${inv.partyPhone}',
-                        style: const pw.TextStyle(
-                            fontSize: 10)),
+                          'Ph: ${inv.partyPhone}',
+                          style: const pw.TextStyle(
+                              fontSize: 10)),
                     if (inv.partyAddress.isNotEmpty)
-                      pw.Text(
-                        inv.partyAddress,
-                        style: const pw.TextStyle(
-                            fontSize: 10)),
+                      pw.Text(inv.partyAddress,
+                          style: const pw.TextStyle(
+                              fontSize: 10)),
                   ],
                 ),
               ),
@@ -210,148 +220,222 @@ class ExportService {
               pw.SizedBox(height: 6),
 
               // ── Items table ───────────────────────────
-              pw.Table(
-                border: pw.TableBorder.all(
-                    color: PdfColors.grey400,
-                    width: 0.5),
-                columnWidths: {
-                  0: const pw.FixedColumnWidth(24),
-                  1: const pw.FixedColumnWidth(52),
-                  2: const pw.FlexColumnWidth(3),
-                  3: const pw.FixedColumnWidth(36),
-                  4: const pw.FixedColumnWidth(72),
-                  5: const pw.FixedColumnWidth(36),
-                  6: const pw.FixedColumnWidth(72),
-                },
-                children: [
-                  pw.TableRow(
-                    decoration: const pw.BoxDecoration(
-                        color: PdfColors.grey200),
-                    children: [
-                      _th('#'),
-                      _th('HSN'),
-                      _th('Description'),
-                      _th('Qty', center: true),
-                      _th('Rate/Unit', right: true),
-                      _th('GST%', center: true),
-                      _th('Amount', right: true),
-                    ],
-                  ),
-                  ...inv.items.asMap().entries.map(
-                    (e) => pw.TableRow(children: [
-                      _td('${e.key + 1}', center: true),
-                      _td(e.value.hsn),
-                      _td(e.value.name),
-                      _td(
-                        e.value.qty % 1 == 0
-                          ? e.value.qty.toInt().toString()
-                          : e.value.qty.toString(),
-                        center: true),
-                      _td(inr(e.value.rate), right: true),
-                      _td('${e.value.gstRate}%',
-                          center: true),
-                      _td(inr(e.value.amount),
-                          right: true),
-                    ]),
-                  ),
-                  pw.TableRow(
-                    decoration: const pw.BoxDecoration(
-                        color: PdfColors.grey100),
-                    children: [
-                      _td('', span: true),
-                      _td('', span: true),
-                      _td('Total',
-                          bold: true, span: true),
-                      _td('', span: true),
-                      _td('', span: true),
-                      _td('', span: true),
-                      _td(inr(inv.taxable),
-                          right: true, bold: true),
-                    ],
-                  ),
-                ],
-              ),
+              // Columns differ: registered shows HSN + GST%,
+              // unregistered shows simpler table
+              if (gstRegistered)
+                pw.Table(
+                  border: pw.TableBorder.all(
+                      color: PdfColors.grey400,
+                      width: 0.5),
+                  columnWidths: {
+                    0: const pw.FixedColumnWidth(24),
+                    1: const pw.FixedColumnWidth(52),
+                    2: const pw.FlexColumnWidth(3),
+                    3: const pw.FixedColumnWidth(36),
+                    4: const pw.FixedColumnWidth(72),
+                    5: const pw.FixedColumnWidth(36),
+                    6: const pw.FixedColumnWidth(72),
+                  },
+                  children: [
+                    pw.TableRow(
+                      decoration: const pw.BoxDecoration(
+                          color: PdfColors.grey200),
+                      children: [
+                        _th('#'),
+                        _th('HSN'),
+                        _th('Description'),
+                        _th('Qty', center: true),
+                        _th('Rate/Unit', right: true),
+                        _th('GST%', center: true),
+                        _th('Amount', right: true),
+                      ],
+                    ),
+                    ...inv.items.asMap().entries.map(
+                      (e) => pw.TableRow(children: [
+                        _td('${e.key + 1}',
+                            center: true),
+                        _td(e.value.hsn),
+                        _td(e.value.name),
+                        _td(
+                            e.value.qty % 1 == 0
+                                ? e.value.qty
+                                    .toInt()
+                                    .toString()
+                                : e.value.qty.toString(),
+                            center: true),
+                        _td(inr(e.value.rate),
+                            right: true),
+                        _td('${e.value.gstRate}%',
+                            center: true),
+                        _td(inr(e.value.amount),
+                            right: true),
+                      ]),
+                    ),
+                    pw.TableRow(
+                      decoration: const pw.BoxDecoration(
+                          color: PdfColors.grey100),
+                      children: [
+                        _td('', span: true),
+                        _td('', span: true),
+                        _td('Total',
+                            bold: true, span: true),
+                        _td('', span: true),
+                        _td('', span: true),
+                        _td('', span: true),
+                        _td(inr(inv.taxable),
+                            right: true, bold: true),
+                      ],
+                    ),
+                  ],
+                )
+              else
+                // Unregistered: simpler table, no HSN/GST columns
+                pw.Table(
+                  border: pw.TableBorder.all(
+                      color: PdfColors.grey400,
+                      width: 0.5),
+                  columnWidths: {
+                    0: const pw.FixedColumnWidth(24),
+                    1: const pw.FlexColumnWidth(3),
+                    2: const pw.FixedColumnWidth(40),
+                    3: const pw.FixedColumnWidth(80),
+                    4: const pw.FixedColumnWidth(80),
+                  },
+                  children: [
+                    pw.TableRow(
+                      decoration: const pw.BoxDecoration(
+                          color: PdfColors.grey200),
+                      children: [
+                        _th('#'),
+                        _th('Description'),
+                        _th('Qty', center: true),
+                        _th('Rate/Unit', right: true),
+                        _th('Amount', right: true),
+                      ],
+                    ),
+                    ...inv.items.asMap().entries.map(
+                      (e) => pw.TableRow(children: [
+                        _td('${e.key + 1}',
+                            center: true),
+                        _td(e.value.name),
+                        _td(
+                            e.value.qty % 1 == 0
+                                ? e.value.qty
+                                    .toInt()
+                                    .toString()
+                                : e.value.qty.toString(),
+                            center: true),
+                        _td(inr(e.value.rate),
+                            right: true),
+                        _td(inr(e.value.amount),
+                            right: true),
+                      ]),
+                    ),
+                    pw.TableRow(
+                      decoration: const pw.BoxDecoration(
+                          color: PdfColors.grey100),
+                      children: [
+                        _td('', span: true),
+                        _td('Total',
+                            bold: true, span: true),
+                        _td('', span: true),
+                        _td('', span: true),
+                        _td(inr(inv.taxable),
+                            right: true, bold: true),
+                      ],
+                    ),
+                  ],
+                ),
               pw.SizedBox(height: 12),
 
-              // ── HSN Summary table ─────────────────────
-              pw.Text('HSN/SAC Summary',
-                style: pw.TextStyle(
-                  fontSize: 9,
-                  fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(height: 4),
-              pw.Table(
-                border: pw.TableBorder.all(
-                    color: PdfColors.grey400,
-                    width: 0.5),
-                columnWidths: {
-                  0: const pw.FlexColumnWidth(1.2),
-                  1: const pw.FlexColumnWidth(1.5),
-                  2: const pw.FlexColumnWidth(0.8),
-                  3: const pw.FlexColumnWidth(0.8),
-                  4: const pw.FlexColumnWidth(1.2),
-                  5: const pw.FlexColumnWidth(0.8),
-                  6: const pw.FlexColumnWidth(1.2),
-                  7: const pw.FlexColumnWidth(1.2),
-                },
-                children: [
-                  pw.TableRow(
-                    decoration: const pw.BoxDecoration(
-                        color: PdfColors.grey200),
-                    children: [
-                      _th('HSN/SAC'),
-                      _th('Taxable Amt', right: true),
-                      _th('Qty', center: true),
-                      _th('CGST%', center: true),
-                      _th('CGST Amt', right: true),
-                      _th('SGST%', center: true),
-                      _th('SGST Amt', right: true),
-                      _th('Total Tax', right: true),
-                    ],
-                  ),
-                  ...hsnRows.map((h) {
-                    final halfRate = h.gstRate / 2;
-                    final cgst = inv.interstate
-                        ? 0.0
-                        : h.taxable * halfRate / 100;
-                    final sgst = inv.interstate
-                        ? 0.0
-                        : h.taxable * halfRate / 100;
-                    final igst = inv.interstate
-                        ? h.taxable * h.gstRate / 100
-                        : 0.0;
-                    final totalTax =
-                        inv.interstate ? igst : cgst + sgst;
-                    return pw.TableRow(children: [
-                      _td(h.hsn),
-                      _td(inr(h.taxable), right: true),
-                      _td(
-                        h.qty % 1 == 0
-                          ? h.qty.toInt().toString()
-                          : h.qty.toString(),
-                        center: true),
-                      _td(inv.interstate
-                        ? '-'
-                        : '${halfRate}%',
-                        center: true),
-                      _td(inv.interstate
-                        ? '-'
-                        : inr(cgst),
-                        right: true),
-                      _td(inv.interstate
-                        ? '-'
-                        : '${halfRate}%',
-                        center: true),
-                      _td(inv.interstate
-                        ? '-'
-                        : inr(sgst),
-                        right: true),
-                      _td(inr(totalTax),
-                          right: true, bold: true),
-                    ]);
-                  }),
-                ],
-              ),
-              pw.SizedBox(height: 12),
+              // ── HSN Summary (registered only) ─────────
+              if (gstRegistered && hsnRows.isNotEmpty) ...[
+                pw.Text('HSN/SAC Summary',
+                    style: pw.TextStyle(
+                        fontSize: 9,
+                        fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 4),
+                pw.Table(
+                  border: pw.TableBorder.all(
+                      color: PdfColors.grey400,
+                      width: 0.5),
+                  columnWidths: {
+                    0: const pw.FlexColumnWidth(1.2),
+                    1: const pw.FlexColumnWidth(1.5),
+                    2: const pw.FlexColumnWidth(0.8),
+                    3: const pw.FlexColumnWidth(0.8),
+                    4: const pw.FlexColumnWidth(1.2),
+                    5: const pw.FlexColumnWidth(0.8),
+                    6: const pw.FlexColumnWidth(1.2),
+                    7: const pw.FlexColumnWidth(1.2),
+                  },
+                  children: [
+                    pw.TableRow(
+                      decoration: const pw.BoxDecoration(
+                          color: PdfColors.grey200),
+                      children: [
+                        _th('HSN/SAC'),
+                        _th('Taxable Amt', right: true),
+                        _th('Qty', center: true),
+                        _th('CGST%', center: true),
+                        _th('CGST Amt', right: true),
+                        _th('SGST%', center: true),
+                        _th('SGST Amt', right: true),
+                        _th('Total Tax', right: true),
+                      ],
+                    ),
+                    ...hsnRows.map((h) {
+                      final halfRate = h.gstRate / 2;
+                      final cgst = inv.interstate
+                          ? 0.0
+                          : h.taxable * halfRate / 100;
+                      final sgst = inv.interstate
+                          ? 0.0
+                          : h.taxable * halfRate / 100;
+                      final igst = inv.interstate
+                          ? h.taxable * h.gstRate / 100
+                          : 0.0;
+                      final totalTax = inv.interstate
+                          ? igst
+                          : cgst + sgst;
+                      return pw.TableRow(children: [
+                        _td(h.hsn),
+                        _td(inr(h.taxable), right: true),
+                        _td(
+                            h.qty % 1 == 0
+                                ? h.qty
+                                    .toInt()
+                                    .toString()
+                                : h.qty.toString(),
+                            center: true),
+                        _td(
+                            inv.interstate
+                                ? '-'
+                                : '${halfRate}%',
+                            center: true),
+                        _td(
+                            inv.interstate
+                                ? '-'
+                                : inr(cgst),
+                            right: true),
+                        _td(
+                            inv.interstate
+                                ? '-'
+                                : '${halfRate}%',
+                            center: true),
+                        _td(
+                            inv.interstate
+                                ? '-'
+                                : inr(sgst),
+                            right: true),
+                        _td(inr(totalTax),
+                            right: true, bold: true),
+                      ]);
+                    }),
+                  ],
+                ),
+                pw.SizedBox(height: 12),
+              ],
 
               // ── Tax summary + Grand total ──────────────
               pw.Row(
@@ -366,47 +450,50 @@ class ExportService {
                           color: PdfColors.grey300,
                           width: 0.5),
                       children: [
-                        if (!inv.interstate) ...[
-                          _summaryRow(
-                              'CGST', inr(inv.cgst)),
-                          _summaryRow(
-                              'SGST', inr(inv.sgst)),
-                        ] else
-                          _summaryRow(
-                              'IGST', inr(inv.igst)),
-                        _summaryRow('Taxable Amount',
-                            inr(inv.taxable)),
+                        // Show GST breakdown only if registered
+                        if (gstRegistered) ...[
+                          if (!inv.interstate) ...[
+                            _summaryRow(
+                                'CGST', inr(inv.cgst)),
+                            _summaryRow(
+                                'SGST', inr(inv.sgst)),
+                          ] else
+                            _summaryRow(
+                                'IGST', inr(inv.igst)),
+                          _summaryRow('Taxable Amount',
+                              inr(inv.taxable)),
+                        ],
                         pw.TableRow(
                           decoration:
                               const pw.BoxDecoration(
                                   color:
-                                    PdfColors.grey100),
+                                      PdfColors.grey100),
                           children: [
                             pw.Padding(
                               padding:
-                                const pw.EdgeInsets
-                                    .all(5),
+                                  const pw.EdgeInsets
+                                      .all(5),
                               child: pw.Text(
-                                'GRAND TOTAL',
-                                style: pw.TextStyle(
-                                  fontSize: 10,
-                                  fontWeight:
-                                    pw.FontWeight
-                                        .bold)),
+                                  'GRAND TOTAL',
+                                  style: pw.TextStyle(
+                                      fontSize: 10,
+                                      fontWeight:
+                                          pw.FontWeight
+                                              .bold)),
                             ),
                             pw.Padding(
                               padding:
-                                const pw.EdgeInsets
-                                    .all(5),
+                                  const pw.EdgeInsets
+                                      .all(5),
                               child: pw.Text(
-                                inr(inv.grandTotal),
-                                textAlign:
-                                  pw.TextAlign.right,
-                                style: pw.TextStyle(
-                                  fontSize: 10,
-                                  fontWeight:
-                                    pw.FontWeight
-                                        .bold)),
+                                  inr(inv.grandTotal),
+                                  textAlign:
+                                      pw.TextAlign.right,
+                                  style: pw.TextStyle(
+                                      fontSize: 10,
+                                      fontWeight:
+                                          pw.FontWeight
+                                              .bold)),
                             ),
                           ],
                         ),
@@ -424,16 +511,18 @@ class ExportService {
                     pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text(
-                    'This is a computer generated invoice.',
+                    gstRegistered
+                        ? 'This is a computer generated invoice.'
+                        : 'Not registered under GST — tax not collected on this invoice.',
                     style: pw.TextStyle(
-                      fontSize: 8,
-                      color: PdfColors.grey600,
-                      fontStyle: pw.FontStyle.italic)),
+                        fontSize: 8,
+                        color: PdfColors.grey600,
+                        fontStyle: pw.FontStyle.italic)),
                   pw.Text(
                     'For ${company.name}',
                     style: const pw.TextStyle(
-                      fontSize: 8,
-                      color: PdfColors.grey600)),
+                        fontSize: 8,
+                        color: PdfColors.grey600)),
                 ],
               ),
             ],
@@ -445,8 +534,7 @@ class ExportService {
     final dir = await getTemporaryDirectory();
     final fileName =
         'Invoice_${inv.invNo}_${inv.party}.pdf'
-            .replaceAll(
-                RegExp(r'[^a-zA-Z0-9_.]'), '_');
+            .replaceAll(RegExp(r'[^a-zA-Z0-9_.]'), '_');
     final file = File('${dir.path}/$fileName');
     await file.writeAsBytes(await pdf.save());
     return file.path;
@@ -454,8 +542,7 @@ class ExportService {
 
   static Future<void> shareInvoicePdf(
       Invoice inv, Company company) async {
-    final path =
-        await generateInvoicePdf(inv, company);
+    final path = await generateInvoicePdf(inv, company);
     final xFile =
         XFile(path, mimeType: 'application/pdf');
     await Share.shareXFiles(
@@ -487,14 +574,14 @@ class ExportService {
     return pw.Padding(
       padding: const pw.EdgeInsets.all(5),
       child: pw.Text(text,
-        textAlign: right
-            ? pw.TextAlign.right
-            : center
-                ? pw.TextAlign.center
-                : pw.TextAlign.left,
-        style: pw.TextStyle(
-          fontSize: 8,
-          fontWeight: pw.FontWeight.bold)),
+          textAlign: right
+              ? pw.TextAlign.right
+              : center
+                  ? pw.TextAlign.center
+                  : pw.TextAlign.left,
+          style: pw.TextStyle(
+              fontSize: 8,
+              fontWeight: pw.FontWeight.bold)),
     );
   }
 
@@ -506,16 +593,16 @@ class ExportService {
     return pw.Padding(
       padding: const pw.EdgeInsets.all(5),
       child: pw.Text(text,
-        textAlign: right
-            ? pw.TextAlign.right
-            : center
-                ? pw.TextAlign.center
-                : pw.TextAlign.left,
-        style: pw.TextStyle(
-          fontSize: 9,
-          fontWeight: bold
-              ? pw.FontWeight.bold
-              : pw.FontWeight.normal)),
+          textAlign: right
+              ? pw.TextAlign.right
+              : center
+                  ? pw.TextAlign.center
+                  : pw.TextAlign.left,
+          style: pw.TextStyle(
+              fontSize: 9,
+              fontWeight: bold
+                  ? pw.FontWeight.bold
+                  : pw.FontWeight.normal)),
     );
   }
 
@@ -523,14 +610,16 @@ class ExportService {
       String label, String value) {
     return pw.TableRow(children: [
       pw.Padding(
-        padding: const pw.EdgeInsets.all(5),
-        child: pw.Text(label,
-          style: const pw.TextStyle(fontSize: 9))),
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Text(label,
+              style:
+                  const pw.TextStyle(fontSize: 9))),
       pw.Padding(
-        padding: const pw.EdgeInsets.all(5),
-        child: pw.Text(value,
-          textAlign: pw.TextAlign.right,
-          style: const pw.TextStyle(fontSize: 9))),
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Text(value,
+              textAlign: pw.TextAlign.right,
+              style:
+                  const pw.TextStyle(fontSize: 9))),
     ]);
   }
 }
