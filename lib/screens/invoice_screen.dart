@@ -333,16 +333,29 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
               // ── Items ─────────────────────────────
               _sectionTitle('Items'),
               const SizedBox(height: 8),
-              ..._rows.asMap().entries.map((e) =>
-                _ItemRowWidget(
-                  key: ValueKey(e.key),
-                  row: e.value,
-                  stockItems: _config.stockItems,
-                  index: e.key,
-                  gstRegistered: _gstRegistered,
-                  onRemove: () => _removeRow(e.key),
-                  onChanged: () => setState(() {}),
-                )),
+              ReorderableListView(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                buildDefaultDragHandles: false,
+                onReorder: (oldIndex, newIndex) {
+                  setState(() {
+                    if (newIndex > oldIndex) newIndex--;
+                    final row = _rows.removeAt(oldIndex);
+                    _rows.insert(newIndex, row);
+                  });
+                },
+                children: _rows.asMap().entries.map((e) =>
+                  _ItemRowWidget(
+                    key: ValueKey(e.key),
+                    row: e.value,
+                    stockItems: _config.stockItems,
+                    index: e.key,
+                    gstRegistered: _gstRegistered,
+                    onRemove: () => _removeRow(e.key),
+                    onChanged: () => setState(() {}),
+                  ),
+                ).toList(),
+              ),
               const SizedBox(height: 8),
               TextButton.icon(
                 onPressed: _addRow,
@@ -525,7 +538,7 @@ class _ItemRowWidgetState
       padding: const EdgeInsets.all(14),
       decoration: MunimTheme.cardBox(),
       child: Column(children: [
-        // ── Custom toggle + remove ─────────────
+        // ── Custom toggle + remove + drag handle ──
         Row(
           mainAxisAlignment:
               MainAxisAlignment.spaceBetween,
@@ -550,12 +563,25 @@ class _ItemRowWidgetState
                 },
               ),
             ]),
-            IconButton(
-              icon: const Icon(
-                Icons.remove_circle_outline,
-                color: MunimTheme.danger),
-              onPressed: widget.onRemove,
-            ),
+            Row(children: [
+              IconButton(
+                icon: const Icon(
+                  Icons.remove_circle_outline,
+                  color: MunimTheme.danger),
+                onPressed: widget.onRemove,
+              ),
+              // Drag handle
+              ReorderableDragStartListener(
+                index: widget.index,
+                child: const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Icon(
+                    Icons.drag_handle,
+                    color: MunimTheme.muted,
+                    size: 20),
+                ),
+              ),
+            ]),
           ],
         ),
         const SizedBox(height: 4),
