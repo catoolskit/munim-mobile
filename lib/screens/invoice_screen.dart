@@ -65,6 +65,14 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
   double get _sgst => _interstate ? 0 : _totalGst / 2;
   double get _igst => _interstate ? _totalGst : 0;
 
+  // ── v0.18: respect GST registration ──────────────────────
+  bool get _gstRegistered =>
+      _config.company.gstRegistered;
+
+  // If unregistered, grand total = taxable only (no GST)
+  double get _effectiveGrandTotal =>
+      _gstRegistered ? _grandTotal : _taxable;
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedParty == null && !_newParty) {
@@ -160,7 +168,9 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New Sale Invoice'),
+        title: Text(_gstRegistered
+            ? 'New Sale Invoice'
+            : 'New Retail Invoice'),
         actions: [
           TextButton(
             onPressed: _saving ? null : _save,
@@ -249,14 +259,17 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                           () => _partyType = v!),
                     ),
                     const SizedBox(height: 10),
-                    TextFormField(
-                      controller: _partyGstinCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'GSTIN (optional)'),
-                      textCapitalization:
-                          TextCapitalization.characters,
-                    ),
-                    const SizedBox(height: 10),
+                    // Only show GSTIN field if registered
+                    if (_gstRegistered) ...[
+                      TextFormField(
+                        controller: _partyGstinCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'GSTIN (optional)'),
+                        textCapitalization:
+                            TextCapitalization.characters,
+                      ),
+                      const SizedBox(height: 10),
+                    ],
                     TextFormField(
                       controller: _partyPhoneCtrl,
                       decoration: const InputDecoration(
@@ -266,22 +279,24 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                     ),
                   ],
                   const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Inter-state (IGST)?',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: MunimTheme.muted)),
-                      Switch(
-                        value: _interstate,
-                        activeColor: MunimTheme.accent,
-                        onChanged: (v) => setState(
-                            () => _interstate = v),
-                      ),
-                    ],
-                  ),
+                  // Only show interstate toggle if registered
+                  if (_gstRegistered)
+                    Row(
+                      mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Inter-state (IGST)?',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: MunimTheme.muted)),
+                        Switch(
+                          value: _interstate,
+                          activeColor: MunimTheme.accent,
+                          onChanged: (v) => setState(
+                              () => _interstate = v),
+                        ),
+                      ],
+                    ),
                 ]),
               ),
               const SizedBox(height: 16),
@@ -324,6 +339,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                   row: e.value,
                   stockItems: _config.stockItems,
                   index: e.key,
+                  gstRegistered: _gstRegistered,
                   onRemove: () => _removeRow(e.key),
                   onChanged: () => setState(() {}),
                 )),
@@ -342,18 +358,21 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
                 child: Column(children: [
                   _totalRow('Taxable amount',
                     ExportService.inr(_taxable)),
-                  if (!_interstate) ...[
-                    _totalRow('CGST',
-                      ExportService.inr(_cgst)),
-                    _totalRow('SGST',
-                      ExportService.inr(_sgst)),
-                  ] else
-                    _totalRow('IGST',
-                      ExportService.inr(_igst)),
+                  // Show GST breakdown only if registered
+                  if (_gstRegistered) ...[
+                    if (!_interstate) ...[
+                      _totalRow('CGST',
+                        ExportService.inr(_cgst)),
+                      _totalRow('SGST',
+                        ExportService.inr(_sgst)),
+                    ] else
+                      _totalRow('IGST',
+                        ExportService.inr(_igst)),
+                  ],
                   const Divider(),
                   _totalRow(
                     'Grand Total',
-                    'Rs ${ExportService.inr(_grandTotal)}',
+                    'Rs ${ExportService.inr(_effectiveGrandTotal)}',
                     bold: true,
                     color: MunimTheme.accent),
                 ]),
@@ -373,6 +392,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
       color: MunimTheme.muted,
       letterSpacing: 0.8));
 
+  // ── v0.18: Fixed truncation with Flexible ─────────────────
   Widget _totalRow(String label, String value,
       {bool bold = false,
       Color color = MunimTheme.text}) {
@@ -382,22 +402,30 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
         mainAxisAlignment:
             MainAxisAlignment.spaceBetween,
         children: [
-          Text(label,
-            style: TextStyle(
-              fontSize: 13,
-              color: bold
-                  ? MunimTheme.text
-                  : MunimTheme.muted,
-              fontWeight: bold
-                  ? FontWeight.bold
-                  : FontWeight.normal)),
-          Text(value,
-            style: TextStyle(
-              fontSize: bold ? 15 : 13,
-              color: color,
-              fontWeight: bold
-                  ? FontWeight.bold
-                  : FontWeight.w500)),
+          Flexible(
+            flex: 2,
+            child: Text(label,
+              style: TextStyle(
+                fontSize: 13,
+                color: bold
+                    ? MunimTheme.text
+                    : MunimTheme.muted,
+                fontWeight: bold
+                    ? FontWeight.bold
+                    : FontWeight.normal)),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            flex: 3,
+            child: Text(value,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: bold ? 14 : 13,
+                color: color,
+                fontWeight: bold
+                    ? FontWeight.bold
+                    : FontWeight.w500)),
+          ),
         ],
       ),
     );
@@ -407,9 +435,7 @@ class _InvoiceScreenState extends State<InvoiceScreen> {
 // ── Item row model ─────────────────────────────────────────────
 
 class _ItemRow {
-  // Stock item mode
   StockItem? selectedItem;
-  // Custom item mode
   bool isCustom = false;
   String customName    = '';
   String customHsn     = '';
@@ -438,6 +464,7 @@ class _ItemRowWidget extends StatefulWidget {
   final _ItemRow row;
   final List<StockItem> stockItems;
   final int index;
+  final bool gstRegistered;
   final VoidCallback onRemove;
   final VoidCallback onChanged;
 
@@ -446,6 +473,7 @@ class _ItemRowWidget extends StatefulWidget {
     required this.row,
     required this.stockItems,
     required this.index,
+    required this.gstRegistered,
     required this.onRemove,
     required this.onChanged,
   });
@@ -553,10 +581,13 @@ class _ItemRowWidgetState
           const SizedBox(height: 8),
           if (widget.row.selectedItem != null)
             Row(children: [
-              _chip('HSN: ${widget.row.selectedItem!.hsn}'),
-              const SizedBox(width: 8),
-              _chip('GST: ${widget.row.selectedItem!.gstRate}%'),
-              const SizedBox(width: 8),
+              // Show HSN and GST only if registered
+              if (widget.gstRegistered) ...[
+                _chip('HSN: ${widget.row.selectedItem!.hsn}'),
+                const SizedBox(width: 8),
+                _chip('GST: ${widget.row.selectedItem!.gstRate}%'),
+                const SizedBox(width: 8),
+              ],
               _chip(widget.row.selectedItem!.unit),
             ]),
         ]
@@ -574,44 +605,47 @@ class _ItemRowWidgetState
               widget.onChanged();
             },
           ),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(
-              child: TextFormField(
-                controller: _customHsnCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'HSN/SAC',
-                  contentPadding:
-                    EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 10)),
-                onChanged: (v) {
-                  widget.row.customHsn = v;
-                  widget.onChanged();
-                },
+          // Show HSN and GST fields only if registered
+          if (widget.gstRegistered) ...[
+            const SizedBox(height: 8),
+            Row(children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _customHsnCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'HSN/SAC',
+                    contentPadding:
+                      EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 10)),
+                  onChanged: (v) {
+                    widget.row.customHsn = v;
+                    widget.onChanged();
+                  },
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: TextFormField(
-                controller: _customGstCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'GST %',
-                  contentPadding:
-                    EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 10)),
-                keyboardType:
-                  const TextInputType
-                    .numberWithOptions(decimal: true),
-                onChanged: (v) {
-                  widget.row.customGstRate =
-                      v.isEmpty ? '0' : v;
-                  widget.onChanged();
-                },
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextFormField(
+                  controller: _customGstCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'GST %',
+                    contentPadding:
+                      EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 10)),
+                  keyboardType:
+                    const TextInputType
+                      .numberWithOptions(decimal: true),
+                  onChanged: (v) {
+                    widget.row.customGstRate =
+                        v.isEmpty ? '0' : v;
+                    widget.onChanged();
+                  },
+                ),
               ),
-            ),
-          ]),
+            ]),
+          ],
         ],
 
         const SizedBox(height: 10),
@@ -662,22 +696,31 @@ class _ItemRowWidgetState
             mainAxisAlignment:
                 MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Taxable: Rs ${ExportService.inr(widget.row.amount)}',
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: MunimTheme.muted)),
-              Text(
-                'GST: Rs ${ExportService.inr(widget.row.gstAmount)}',
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: MunimTheme.muted)),
-              Text(
-                'Total: Rs ${ExportService.inr(widget.row.total)}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: MunimTheme.accent)),
+              Flexible(
+                child: Text(
+                  'Taxable: Rs ${ExportService.inr(widget.row.amount)}',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: MunimTheme.muted)),
+              ),
+              // Show GST only if registered
+              if (widget.gstRegistered)
+                Flexible(
+                  child: Text(
+                    'GST: Rs ${ExportService.inr(widget.row.gstAmount)}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: MunimTheme.muted)),
+                ),
+              Flexible(
+                child: Text(
+                  'Total: Rs ${ExportService.inr(widget.gstRegistered ? widget.row.total : widget.row.amount)}',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: MunimTheme.accent)),
+              ),
             ],
           ),
         ],
