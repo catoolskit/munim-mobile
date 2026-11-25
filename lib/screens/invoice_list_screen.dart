@@ -4,6 +4,7 @@ import 'package:munim_mobile/services/config_service.dart';
 import 'package:munim_mobile/services/storage_service.dart';
 import 'package:munim_mobile/services/export_service.dart';
 import 'package:munim_mobile/models/invoice.dart';
+import 'package:munim_mobile/screens/invoice_detail_screen.dart';
 
 class InvoiceListScreen extends StatefulWidget {
   final AppConfig config;
@@ -186,6 +187,12 @@ class _InvoiceListScreenState
                         invoice: inv,
                         onDelete: () => _delete(inv),
                         onSharePdf: () => _sharePdf(inv),
+                        onOpen: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => InvoiceDetailScreen(invoice: inv, config: widget.config),
+                          ),
+                        ),
                       );
                     },
                   ),
@@ -216,17 +223,22 @@ class _InvoiceCard extends StatelessWidget {
   final Invoice invoice;
   final VoidCallback onDelete;
   final VoidCallback onSharePdf;
+  final VoidCallback onOpen;
 
   const _InvoiceCard({
     required this.invoice,
     required this.onDelete,
     required this.onSharePdf,
+    required this.onOpen,
   });
 
   @override
   Widget build(BuildContext context) {
     final inv = invoice;
-    return Container(
+    return InkWell(
+      onTap: onOpen,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: MunimTheme.cardBox(),
       child: Column(
@@ -352,6 +364,7 @@ class _InvoiceCard extends StatelessWidget {
             ]),
           ),
         ],
+      ),
       ),
     );
   }

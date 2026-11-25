@@ -7,6 +7,7 @@ import 'package:munim_mobile/models/invoice.dart';
 import 'package:munim_mobile/screens/setup_screen.dart';
 import 'package:munim_mobile/screens/invoice_screen.dart';
 import 'package:munim_mobile/screens/invoice_list_screen.dart';
+import 'package:munim_mobile/screens/invoice_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final AppConfig config;
@@ -335,12 +336,20 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: const TextStyle(
                     fontSize: 11,
                     color: MunimTheme.muted)),
-                Text(value,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: MunimTheme.text),
-                  overflow: TextOverflow.ellipsis),
+                SizedBox(
+                  width: double.infinity,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(value,
+                      maxLines: 1,
+                      softWrap: false,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: MunimTheme.text)),
+                  ),
+                ),
               ],
             ),
           ),
@@ -350,8 +359,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _invoiceTile(Invoice inv) {
-    return GestureDetector(
-      onTap: () => _sharePdf(inv),
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => InvoiceDetailScreen(invoice: inv, config: _config),
+        ),
+      ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(14),
